@@ -4,6 +4,7 @@ import struct
 import threading
 import re
 import time
+import binascii
 import logging
 FORMAT = "%(asctime)-15s %(levelname)-8s %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=FORMAT, filename='/var/log/cnc-sniffer/cnc.log')
@@ -14,6 +15,8 @@ class Conection:
         self.addr = server[0]
         self.port = server[1]
         self.atk_dict = dict()
+        self.buf_size = 1024
+        self.buf = ""
 
     def run(self):
         m = re.match('[0-9].[0-9].[0-9].[0-9]', self.addr)
@@ -40,23 +43,35 @@ class Conection:
                 logger.debug('connecting to %s port %s' % server_address)
                 self.sock.connect(server_address)
                 # Send data
-                logger.info('successfully connected to CNC: %s' % self.addr)
+                logger.info('successfully connected to CNC: %s (%s)' % (self.addr, self.domain))
                 self.sock.sendall(b'\x00\x00\x00\x01')
                 self.sock.sendall(b'\x00')
 
                 while True:
+                    self.buf = self.sock.recv(self.buf_size)
+                    logger.info("recieve data from %s : %s" % 
+                        (self.addr, ' '.join(map(lambda y: '\\x'+y, [binascii.hexlify(i) for i in self.buf]))))
                     self.parse_attack()
+
             except socket.error, msg:
                 time.sleep(5)
                 logger.error(msg)
                 logger.error("reconnect to the CNC server %s" % self.addr)
+                continue
+            except Exception as e:
+                if hasattr(e, 'message'):
+                    print(e.message)
+                else:
+                    print(e)
+                time.sleep(5)
                 continue
             finally:
                 logger.debug('closing socket')
                 self.sock.close()
 
     def read_int_from_bytes(self, bytes):
-        data = self.sock.recv(bytes)
+        data = self.buf[:bytes]
+        self.buf = self.buf[bytes:]
         if bytes == 1:
             return struct.unpack("!H", "\x00"+data)[0]
         elif bytes == 2:
@@ -65,7 +80,8 @@ class Conection:
             return struct.unpack("!I", data)[0]
 
     def read_ip_from_bytes(self):
-        data = self.sock.recv(4)
+        data = self.buf[:4]
+        self.buf = self.buf[4:]
         data = [d for d in data]
         data = map(lambda x: "\x00"+x, data)
         data = reduce(lambda x, y: x+y, data)
@@ -110,7 +126,8 @@ class Conection:
             opt_val_len = self.read_int_from_bytes(1)
             logger.debug("opt val len %d" % opt_val_len)
 
-            atk_opt_data = self.sock.recv(opt_val_len)
+            atk_opt_data = self.buf[:opt_val_len]
+            self.buf = self.buf[opt_val_len:]
             logger.debug(bytes.decode(atk_opt_data))
 
             atk_opt.append((atk_opt_key, atk_opt_data))
@@ -127,35 +144,36 @@ def sniffer(cnc_servers):
 
 def main():
     cnc_servers = [
-        ("network.santasbigcandycane.cx", 23),
-        ("cnc.disabled.racing", 23),
-        ("gay.disabled.racing", 23),
-        ("penis.disabled.racing", 23),
-        ("b0ts.xf0.pw", 23),
-        ("swinginwithme.ru", 23),
-        ("imscaredaf.xyz", 23),
-        ("kankerc.queryhost.xyz", 23),
-        ("meme.icmp.online", 23),
-        ("our.bklan.ru", 23),
-        ("heis.lateto.work", 23),
-        ("mufoscam.org", 23),
-        ("netwxrk.org", 23),
-        ("q5f2k0evy7go2rax9m4g.ru", 23),
-        ("check.securityupdates.us", 23),
-        ("cnc.routersinthis.com", 23),
-        ("dongs.disabled.racing", 23),
-        ("dongs.icmp.online", 23),
-        ("ftp.timeserver.host", 23),
-        ("ftp.xenonbooter. xyz", 23),
-        ("hightechcrime.club", 23),
-        ("irc.xf0.pw", 23),
-        ("listen.routersinthis.com", 23),
-        ("listen.xenonbooter.xyz", 23),
-        ("loadsecure.pw", 23),
-        ("lol.disabled.racing", 23),
-        ("timeserver.host", 23),
-        ("tr069.online", 23),
-        ("www.mufoscam.org", 23)
+        # ("network.santasbigcandycane.cx", 23),
+        # ("cnc.disabled.racing", 23),
+        # ("gay.disabled.racing", 23),
+        # ("penis.disabled.racing", 23),
+        # ("b0ts.xf0.pw", 23),
+        # ("swinginwithme.ru", 23),
+        # ("imscaredaf.xyz", 23),
+        # ("kankerc.queryhost.xyz", 23),
+        # ("meme.icmp.online", 23),
+        # ("our.bklan.ru", 23),
+        # ("heis.lateto.work", 23),
+        # ("mufoscam.org", 23),
+        # ("netwxrk.org", 23),
+        # ("q5f2k0evy7go2rax9m4g.ru", 23),
+        # ("check.securityupdates.us", 23),
+        # ("cnc.routersinthis.com", 23),
+        # ("dongs.disabled.racing", 23),
+        # ("dongs.icmp.online", 23),
+        # ("ftp.timeserver.host", 23),
+        # ("ftp.xenonbooter. xyz", 23),
+        # ("hightechcrime.club", 23),
+        # ("irc.xf0.pw", 23),
+        # ("listen.routersinthis.com", 23),
+        # ("listen.xenonbooter.xyz", 23),
+        # ("loadsecure.pw", 23),
+        # ("lol.disabled.racing", 23),
+        # ("timeserver.host", 23),
+        # ("tr069.online", 23),
+        # ("www.mufoscam.org", 23)
+        ("35.162.249.35", 23)
     ]
     sniffer(cnc_servers)
     while True:
