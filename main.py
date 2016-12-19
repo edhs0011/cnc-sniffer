@@ -176,6 +176,8 @@ def main():
     ]
     sniffer(cnc_servers)
     while True:
+        global logger
+        logger = logging.getLogger(__name__)
         pass
 
 if __name__=='__main__':
