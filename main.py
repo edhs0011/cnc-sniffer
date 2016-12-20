@@ -7,8 +7,11 @@ import time
 import binascii
 import logging
 FORMAT = "%(asctime)-15s %(levelname)-8s %(message)s"
-logging.basicConfig(level=logging.DEBUG, format=FORMAT, filename='/var/log/cnc-sniffer/cnc.log')
+log_file = "/var/log/cnc-sniffer/cnc.log"
+logging.basicConfig(level=logging.DEBUG, format=FORMAT)
+fileHandler = logging.FileHandler(log_file, mode='a')
 logger = logging.getLogger(__name__)
+logger.addHandler(fileHandler)
 
 class Conection:
     def __init__(self, server):
@@ -176,8 +179,7 @@ def main():
     ]
     sniffer(cnc_servers)
     while True:
-        global logger
-        logger = logging.getLogger(__name__)
+        logger.addHandler(fileHandler)
         pass
 
 if __name__=='__main__':
