@@ -179,7 +179,7 @@ def main():
     ]
     sniffer(cnc_servers)
     while True:
-        logger.addHandler(fileHandler)
+        fileHandler = logging.FileHandler(log_file, mode='a')
         pass
 
 if __name__=='__main__':
